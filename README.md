@@ -1,7 +1,4 @@
-# Bellabeat-case-study
-This is the rmd code for the case study Bellabeat and the google course.
 # Bellabeat-case-study – Kaggle Dataset
-
 This repository contains a data cleaning project based on a dataset originally taken from Kaggle of fitbit users.
 
 ## Contents
