@@ -1,0 +1,430 @@
+---
+title: "Bellabeat Report"
+author: "Nelly Rubio Palomino"
+date: "2025-07-29"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    theme: default
+    self_contained: true
+---
+<style>
+/* Normal text */
+body {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Times New Roman", Times, serif;
+  font-weight: bold;
+}
+
+/* Heading sizes relative to body text */
+h1 { font-size: 20pt; }
+h2 { font-size: 16pt; }
+h3 { font-size: 15pt; }
+h4 { font-size: 14pt; }
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This report focuses on Bellabeat, a wellness company that designs smart products specifically for women. By analyzing data from Fitbit users, the goal is to identify trends in activity, sleep, and lifestyle that can guide Bellabeat’s product development, customer engagement, and marketing strategies. The analysis follows the typical data analysis process: preparing the data, cleaning and processing it, conducting descriptive analysis, and sharing insights through dashboards and recommendations.
+
+# Company overview
+
+**Bellabeat** is a high-tech company that manufactures smart products as a way to empower women through data. Their devices collect data related to activity, sleep, stress and reproductive health. It was founded in 2013 by **Urška Sršen** and **Sando Mur**, and has rapidly grown and positioned itself as a tech-driven wellness company for women. The company has expanded globally, opening offices all around the world and launched multiple products such as:  
+
+* **Belleabeat app**: An app designed to help users with health data related to their activity, sleep, stress, menstrual cycle and mindfulness. 
+* **Leaf**: A wellness tracker made to be used as a bracelet, necklace or clip.
+* **Time watch**: A watch with smart technology that tracks activity, sleep and stress.
+* **Spring**: A water bottle that collects data and tracks daily water intake to ensure hydration.
+* **Bellabeat** **membership**: Subscription-based membership to guide users on nutrition, activity, sleep, health and beauty, and mindfulness.
+
+These products are sold through Bellabeat's e-commerce channel as well as other online retailers. To maintain their success, the company invests in different forms of advertising from the traditional advertising too also investing on digital marketing. They also display ads on YouTube and Google. 
+
+# Problem (Ask)
+
+Bellabeat continues to expand in the global wearables market. However, many potential customers are currently using non-Bellabeat devices, such as Fitbit. This presents an opportunity to analyze data from Fitbit users to identify trends and opportunities.
+
+## Goals
+
+1. Identify trends in the usage of smart devices
+2. Understand how these trends apply to Bellabeat customer base
+3. Determine how these trends can influence Bellabeat marketing strategy
+
+# Data source (Prepare)
+
+The dataset used is the [FitBit Fitness Tracker Data](https://www.kaggle.com/datasets/arashnic/fitbit?resource=download), a public domain dataset available on Kaggle. Shared by [Möbius](https://www.kaggle.com/arashnic), which contains personal tracker data from thirty Fitbit users who consented to share their information. 
+
+This dataset is valuable because it captures real habits of people who use smart devices. This is helpful to better understand the patterns of usage and find advantages for Bellabeat. 
+
+The data was provided in CSV format and is mostly organized in a long format. It includes 18 CSV files, but only the following were used: 
+
+* `dailyActivity_merged`
+* `hourlyCalories_merged`
+* `hourlyIntensities_merged`
+* `hourlySteps_merged`
+* `sleepDay_merged`
+* `weighLogInfo_merged`
+
+## Data Quality (ROCCC)
+
+* **Reliable:** Collected and shared on Kaggle by a verified contributor.
+* **Original:** Contains primary data directly from Fitbit users.
+* **Comprehensive:** Covers multiple dimensions of user behavior (activity, sleep, weight).
+* **Current:** The data gets updated annually, although the last time it was updated was two years ago.
+* **Cited:** The dataset source and contributor are documented.
+
+```{r libraries, include = FALSE, warning=FALSE}
+#Importing libraries
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(visdat)
+library(readr)
+library(DT)
+library(DataExplorer)
+```
+
+```{r load data, include=FALSE, message=FALSE, warning=FALSE}
+#Importing the data needed 
+
+dailyActivity <- read_csv("C:/Users/npalo/Downloads/Documents/Fuente de datos/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+
+hourlyCalories <- read_csv("C:/Users/npalo/Downloads/Documents/Fuente de datos/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/hourlyCalories_merged.csv")
+
+hourlyIntensities <- read_csv("C:/Users/npalo/Downloads/Documents/Fuente de datos/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/hourlyIntensities_merged.csv")
+
+hourlySteps <- read_csv("C:/Users/npalo/Downloads/Documents/Fuente de datos/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/hourlySteps_merged.csv")
+
+sleepDay <- read_csv("C:/Users/npalo/Downloads/Documents/Fuente de datos/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/sleepDay_merged.csv")
+
+weightLogInfo <- read_csv("C:/Users/npalo/Downloads/Documents/Fuente de datos/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/weightLogInfo_merged.csv")
+```
+
+# Data processing (Process)
+
+The analysis was conducted in RStudio, using R Markdown as both a statistical environment and a reporting tool. RStudio was chosen because it allows data cleaning, visualization, and documentation to be completed in the same place, which makes the process easier.
+
+## Data cleaning 
+
+Before the analysis, the datasets were reviewed to check their structure, duplicates, and missing values.
+
+Before the analysis could begin, the datasets needed to be cleaned and prepared. The hourly datasets (`hourlyCalories`, `hourlyIntensities`, `hourlySteps`) presented a challenge because of their many-to-many relationships. To address this, a new log ID (Id_log) was created so the data could be joined in a one-to-many structure. This adjustment made it possible to build a single dataset of hourly activity.
+
+```{r joining, echo=FALSE, message=FALSE, warning=FALSE}
+#Add column 
+hourlyIntensities <- cbind(hourlyIntensities, Id_log = 1:22099)
+hourlyCalories <- cbind(hourlyCalories, Id_log = 1:22099)
+hourlySteps <- cbind(hourlySteps, Id_log = 1:22099)
+
+#Join data
+hourly_activity <- hourlyIntensities %>%
+  left_join(hourlyCalories %>% select(Id_log, Calories), by = "Id_log") %>%
+  left_join(hourlySteps %>% select(Id_log, StepTotal), by = "Id_log")
+
+#Move column ID_Act to first column to make it easier to read
+hourly_activity <- hourly_activity %>%
+  select("Id_log", everything())
+```
+
+Most files were complete, but the Fat column in the `weightLogInfo` dataset contained almost only missing values and was therefore removed. All other datasets were consistent and ready to use.
+
+```{r cleaning, echo=FALSE}
+#Cleaning data
+#Missing data or NA
+head(weightLogInfo)
+vis_miss(weightLogInfo)
+
+#Deleting the Fat column 
+weightLogInfo <- weightLogInfo %>%
+  select(-c(Fat))
+```
+
+# Data Analysis (Analyze)
+
+The analysis looked at four areas: daily activity, hourly activity, sleep, and weight. Descriptive statistics such as mean, median, minimum, maximum, quantiles and standard deviation were calculated. Histograms were also used to see how the data was distributed and to identify possible outliers.
+
+## Descriptive Statistics 
+
+It is important to identify if there are outliers or if the distribution of the data is normal or if it is skewed. This will be divided in three sections. It will be activity (daily and hourly), sleep and weight. This takes in mind all aspect of a Fitbit user. 
+
+### Daily Activity 
+
+```{r dacthist, echo=FALSE}
+#Creating a dataframe with only the variables of interest
+DA_hist <- dailyActivity %>%
+  select(-c(Id, ActivityDate))
+
+#Creating histograms for each variable
+plot_histogram(DA_hist)
+```
+
+```{r DS_dailyact, echo = FALSE}
+#Create a table with central tendency measures
+
+DS_dailyact <- data.frame(Variable = c("Total Steps", "Total Distance", "Very Active Minutes", "Sedentary Minutes","Calories"), 
+                           Min = c(min(dailyActivity$TotalSteps), 
+                                   min(dailyActivity$TotalDistance), 
+                                   min(dailyActivity$VeryActiveMinutes), 
+                                   min(dailyActivity$SedentaryMinutes), 
+                                   min(dailyActivity$Calories)),
+                           Q1 = c(quantile(dailyActivity$TotalSteps, 0.25),
+                               quantile(dailyActivity$TotalDistance, 0.25),
+                               quantile(dailyActivity$VeryActiveMinutes, 0.25),
+                               quantile(dailyActivity$SedentaryMinutes, 0.25),
+                               quantile(dailyActivity$Calories, 0.25)),
+                           Mean = c(mean(dailyActivity$TotalSteps), 
+                                   mean(dailyActivity$TotalDistance), 
+                                   mean(dailyActivity$VeryActiveMinutes), 
+                                   mean(dailyActivity$SedentaryMinutes), 
+                                   mean(dailyActivity$Calories)),
+                           Median = c(median(dailyActivity$TotalSteps), 
+                                   median(dailyActivity$TotalDistance), 
+                                   median(dailyActivity$VeryActiveMinutes), 
+                                   median(dailyActivity$SedentaryMinutes), 
+                                   median(dailyActivity$Calories)),
+                          Q3 = c(quantile(dailyActivity$TotalSteps, 0.75),
+                               quantile(dailyActivity$TotalDistance, 0.75),
+                               quantile(dailyActivity$VeryActiveMinutes, 0.75),
+                               quantile(dailyActivity$SedentaryMinutes, 0.75),
+                               quantile(dailyActivity$Calories, 0.75)),
+                           Max = c(max(dailyActivity$TotalSteps), 
+                                   max(dailyActivity$TotalDistance), 
+                                   max(dailyActivity$VeryActiveMinutes), 
+                                   max(dailyActivity$SedentaryMinutes), 
+                                   max(dailyActivity$Calories)),
+                           Standard_deviation = c(sd(dailyActivity$TotalSteps), 
+                                   sd(dailyActivity$TotalDistance), 
+                                   sd(dailyActivity$VeryActiveMinutes), 
+                                   sd(dailyActivity$SedentaryMinutes), 
+                                   sd(dailyActivity$Calories)))
+
+DT::datatable(DS_dailyact, caption = "Descriptive Statistics for Daily Activity") %>% 
+  DT::formatCurrency(columns = c("Min", "Q1", "Mean", "Median", "Q3", "Max", "Standard_deviation"), currency = "")
+
+```
+
+The total steps users take in a day range between 3,790 and 10,727 steps. For general health, most adults should aim for 8,000–10,000 steps per day. On average, users record 7,638 daily steps, which is within the recommended range. However, there are extreme cases, like days with 0 steps and others with more than 30,000 steps, likely due to races or unusually active days.
+
+Users usually walk about 5.49 km per day. Since the median is close to the mean, values are fairly centered and not strongly skewed. The typical range is 2.62 to 7.71, but extreme cases reach 28.03.
+
+For Very Active Minutes, users average 21.16 minutes per day, typically between 0 and 32 minutes, though some log up to 210 minutes.
+
+Sedentary Minutes range from 729.75 to 1,229.50 minutes per day. On average, users spend 991.21 minutes sedentary. Because the median is higher than the mean, this suggests more days with high sedentary time.
+
+Calories burned in a day average 2,303.61, usually between 1,828.50 and 2,793.25, though some days reach almost 5,000 calories.
+
+Overall, most variables show mean and median values that are relatively close, indicating approximate symmetry, but the presence of outliers still creates skewness. Very Active Minutes stand out, with the mean almost five times higher than the median, suggesting the influence of outliers and high variability. For steps, while the median is 7,400, maximum values reach 36,000, showing that a few highly active users drive up the average. Calories burned are more consistent, with a standard deviation of 718, but still show some variability across users.
+
+### Hourly Activity 
+
+```{r hacthist, echo=FALSE}
+#Creating a dataframe with only the variables of interest
+HA_hist <- hourly_activity %>%
+  select(-c(Id_log, Id, ActivityHour))
+
+#Creating histograms for each variable
+plot_histogram(HA_hist)
+```
+
+```{r DS_hourlyact, echo = FALSE}
+DS_hourlyact <- data.frame(Variable = c("Total Intensity", "Calories", "Steps Total"),
+                            Min = c(min(hourly_activity$TotalIntensity),
+                                    min(hourly_activity$Calories),
+                                    min(hourly_activity$StepTotal)),
+                            Q1 = c(quantile(hourly_activity$TotalIntensity, 0.25),
+                                  quantile(hourly_activity$Calories, 0.25),
+                                  quantile(hourly_activity$StepTotal, 0.25)),
+                            Mean = c(mean(hourly_activity$TotalIntensity),
+                                    mean(hourly_activity$Calories),
+                                    mean(hourly_activity$StepTotal)),
+                            Median = c(median(hourly_activity$TotalIntensity),
+                                    median(hourly_activity$Calories),
+                                    median(hourly_activity$StepTotal)),
+                            Q3 = c(quantile(hourly_activity$TotalIntensity, 0.75),
+                                  quantile(hourly_activity$Calories, 0.75),
+                                  quantile(hourly_activity$StepTotal, 0.75)),
+                            Max = c(max(hourly_activity$TotalIntensity),
+                                    max(hourly_activity$Calories),
+                                    max(hourly_activity$StepTotal)),
+                            Standard_deviation = c(sd(hourly_activity$TotalIntensity),
+                                    sd(hourly_activity$Calories),
+                                    sd(hourly_activity$StepTotal)))
+
+DT::datatable(DS_hourlyact, caption = "Descriptive Statistics for Hourly Activity") %>%
+  DT::formatCurrency(columns = c("Min", "Q1", "Mean", "Median", "Q3", "Max", "Standard_deviation"), currency = "")
+```
+
+The total intensity per hour ranges from 0 to 16. On average, users have an intensity of 12.04, but the median is only 3, showing that while most hours are low intensity, some are much higher. The maximum intensity logged is 180, which is rare and can be considered an outlier.
+
+Calories burned per hour typically range between 63 and 108, with an average of 97.38. In extreme cases, users burn up to 948 calories per hour, which is unusual but possible during intense workouts. Since the median is lower than the mean, the data is skewed to the right.
+
+Users burn at least 42 calories per hour, and the maximum again reaches 948. On average, Fitbit users burn 97.39 calories per hour, but the median is lower, confirming right-skewness and variability. The standard deviation of 61 calories also reflects the spread of values.
+
+Hourly steps range between 0 and 357, but in some cases users log up to 10,554 steps in one hour. This shows clear contrasts between hours with little to no activity and others with intense exercise. On average, users take 320 steps per hour, while the median is 40, which confirms the skew toward lower values and the influence of a few extreme cases.
+
+Overall, the hourly variables are right-skewed, with wide dispersion. The histograms confirm this pattern, and both total and average intensity follow similar distributions.
+
+### Sleep 
+
+```{r sleephist, echo=FALSE}
+#Creating a dataframe with only the variables of interest
+SD_hist <- sleepDay %>%
+  select(-c(Id, SleepDay, TotalSleepRecords))
+
+#Creating histograms for each variable
+plot_histogram(SD_hist)
+```
+
+```{r DS_sleepday, echo = FALSE}
+DS_sleepday <- data.frame(Variable = c("Minutes asleep", "Time in bed"),
+                            Min = c(min(sleepDay$TotalMinutesAsleep),
+                                    min(sleepDay$TotalTimeInBed)),
+                            Q1 = c(quantile(sleepDay$TotalMinutesAsleep, 0.25),
+                                  quantile(sleepDay$TotalTimeInBed, 0.25)),
+                            Mean = c(mean(sleepDay$TotalMinutesAsleep),
+                                    mean(sleepDay$TotalTimeInBed)),
+                            Median = c(median(sleepDay$TotalMinutesAsleep),
+                                    median(sleepDay$TotalTimeInBed)),
+                            Q3 = c(quantile(sleepDay$TotalMinutesAsleep, 0.75),
+                                  quantile(sleepDay$TotalTimeInBed, 0.75)),
+                            Max = c(max(sleepDay$TotalMinutesAsleep),
+                                    max(sleepDay$TotalTimeInBed)),
+                            Standard_deviation = c(sd(sleepDay$TotalMinutesAsleep),
+                                    sd(sleepDay$TotalTimeInBed)))
+
+DT::datatable(DS_sleepday, caption = "Descriptive Statistics for Sleep Day") %>%
+  DT::formatCurrency(columns = c("Min", "Q1", "Mean", "Median", "Q3", "Max", "Standard_deviation"), currency = "")
+```
+
+Minutes asleep usually fall between 361 minutes (6 hours) and 490 minutes (8 hours). On average, users sleep 419 minutes (almost 7 hours). Still, there are extreme cases of less than 1 hour or as much as 796 minutes (13 hours). Sleeping more than 9 hours may indicate health problems, though it can also occur when catching up on rest. The median is 433 minutes, slightly higher than the mean, and the standard deviation of 118 minutes shows a wide spread of values.
+
+Time in bed includes both minutes asleep and minutes awake while in bed. On average, users spend 459 minutes in bed, which is close to their minutes asleep, but the maximum reaches 961 minutes. This suggests that some users spend much more time in bed than asleep, which could be related to conditions like insomnia or sleep apnea.
+
+Adults generally need 7–9 hours of sleep (420–540 minutes). While many Fitbit users fall within this range, others consistently log below or above it.
+
+### Weight Information 
+
+```{r wiplot, echo=FALSE}
+#Creating a dataframe with only the variables of interest
+wli_hist <- weightLogInfo %>%
+  select(-c(Id, Date, LogId, IsManualReport))
+
+#Creating histograms for each variable
+plot_histogram(wli_hist)
+```
+
+```{r DS_weightLI, echo = FALSE}
+DS_weightLI <- data.frame(Variable = c("Weight KG", "BMI"),
+                          Min = c(min(weightLogInfo$WeightKg),
+                                  min(weightLogInfo$BMI)),
+                          Q1 = c(quantile(weightLogInfo$WeightKg, 0.25),
+                                  quantile(weightLogInfo$BMI, 0.25)),
+                          Mean = c(mean(weightLogInfo$WeightKg),
+                                  mean(weightLogInfo$BMI)),
+                          Median = c(median(weightLogInfo$WeightKg),
+                                  median(weightLogInfo$BMI)),
+                          Q3 = c(quantile(weightLogInfo$WeightKg, 0.75),
+                                  quantile(weightLogInfo$BMI, 0.75)),
+                          Max = c(max(weightLogInfo$WeightKg),
+                                  max(weightLogInfo$BMI)),
+                          Standard_deviation = c(sd(weightLogInfo$WeightKg),
+                                  sd(weightLogInfo$BMI)))
+
+DT::datatable(DS_weightLI, caption = "Descriptive Statistics For Weight Log Information") %>%
+  DT::formatCurrency(columns = c("Min", "Q1", "Mean", "Median", "Q3", "Max", "Standard_deviation"), currency = "")
+```
+
+Fitbit user's weights range between 61.40 kg and 85.05 kg. The average is 72.04 kg, while the median is 62.50 kg, suggesting that values are concentrated toward the lower end but pulled upward by higher outliers. Weight ranges from a minimum of 52.60 kg to a maximum of 133.50 kg, and the standard deviation of 13.92 shows high dispersion.
+
+BMI values fall between 23.96 and 25.56, slightly above the optimal range. The average BMI is 25.19, which is on the threshold of overweight. Extreme values go from 21.45 (underweight) to 47.54 (Class III obesity). Because the median is lower than the mean, most users are below 25, but very high values push up the average.
+
+BMI classifications are as follows:
+
+* Underweight: <18.5
+* Normal: 18.5–24.9
+* Overweight: 25–29.9
+* Class I obesity: 30–34.9
+* Class II obesity: 35–39.9
+* Class III obesity: ≥40
+
+# Data sharing (Share)
+
+The visualizations were created in Looker Studio, a free BI platform. Three dashboards were developed, each one focused on showing Fitbit user's behavior and identifying key insights that can help Bellabeat. The dashboards were designed to analyze user behavior over time, which is why the only filter applied is for `Id`.
+
+```{r share, eval = FALSE}
+setwd("C:/Users/npalo/Downloads/Documents/Curso Análisis de Datos")
+
+write.csv(dailyActivity, "daily_activity.csv", row.names = FALSE)
+write.csv(hourly_activity, "hourly_activity.csv", row.names = FALSE)
+write.csv(weightLogInfo, "weight_info.csv", row.names = FALSE)
+write.csv(sleepDay, "sleep_day.csv", row.names = FALSE)
+```
+
+## Daily Behavior
+
+[![Texto alternativo](C:/Users/npalo/Downloads/Documents/Curso Análisis de Datos/Daily Activity.png)](https://lookerstudio.google.com/u/0/reporting/2dd599c1-a43f-4d3f-8d9f-a4b0124335cc/page/zHvYF)
+
+The main observations in daily activity are:
+
+* Users tend to take more steps on Saturdays, while Sundays show the lowest step counts. During the week, daily steps remain close to the average of 7.6K.
+* Certain events or holidays influence activity levels. For example, there was a peak in steps recorded on Cinco de Mayo.
+* Sedentary minutes dominate, often reaching over 1,000 minutes per day, but the distance covered during those minutes is almost zero.
+* In Moderately Active minutes, users typically log 0–20 minutes and cover less than 1 km.
+* In Very Active minutes, they usually log 10–30 minutes, covering distances between 1–2 km. Both categories show a direct relationship: more minutes result in more distance.
+* For Sedentary minutes, this relationship does not apply. A user may log more than 1,000 sedentary minutes with virtually no distance traveled.
+* Some users show irregular patterns, with days of very high activity followed by days with no activity logged. This may indicate either inconsistent activity or inconsistent data entry, such as not wearing the device daily.
+
+## Hourly Behavior
+
+[![Texto alternativo](C:/Users/npalo/Downloads/Documents/Curso Análisis de Datos/Hourly Activity.png)](https://lookerstudio.google.com/u/0/reporting/2dd599c1-a43f-4d3f-8d9f-a4b0124335cc/page/p_sc1miy6jwd)
+
+The main insights in hourly activity are:
+
+* The most active hours are 5 pm to 7 pm, likely when people finish work and have time to exercise. These hours also correspond to higher step counts and more calories burned.
+* A secondary peak appears between 12 pm and 2 pm, where many users log more than 500 steps per hour, suggesting that lunch breaks are also moments of activity.
+* Fewer users are active in the early morning hours (6 am to 11 am).
+* The hour with the highest average intensity and steps is 6 pm, making it the most consistent “workout hour” across users.
+
+## Other factors 
+
+[![Texto alternativo](C:/Users/npalo/Downloads/Documents/Curso Análisis de Datos/Other Factors.png)](https://lookerstudio.google.com/u/0/reporting/2dd599c1-a43f-4d3f-8d9f-a4b0124335cc/page/p_eqygny6jwd)
+
+The main observations from other logged data are:
+
+* Logging frequency varies, some days show more records than others.
+* 62% of users log their weight manually, which may reduce accuracy and consistency.
+* Users spend more time in bed than actually asleep. For some, the gap is small, while for others it is significant, suggesting difficulties in falling asleep or sleep interruptions.
+* Sleep time varies by day. Some nights are below 400 minutes (6.6 hrs), while others exceed 450 minutes (7.5 hrs).
+* A few users log multiple sleep sessions in one day, which may reflect naps.
+* Not all users log consistently. In some cases, users record data for 2–3 consecutive days and then stop logging for several days. This lack of consistency is especially notable in sleep and weight data.
+
+# Recommendations (Act)
+
+Based on the insights from the dashboards and descriptive statistics, Bellabeat can apply these insights to their devices and customer experience.
+
+First, goals should be personalized. Most users already walk around 7,600 steps, so instead of one standard target, devices could adapt after a couple weeks of data and set progressive goals (e.g., starting with 5,000 steps and slowly moving toward 10,000). The same idea works for sleep, once a user’s average is detected, the device could recommend keeping a steady routine.
+
+Because sedentary minutes are the highest, Bellabeat could add alerts after long periods of inactivity to remind users to move. Sleep reports could also be improved by showing the gap between time in bed and actual sleep, along with simple tips to rest better. They could even add daily or weekly rankings (e.g., “6 hours = normal” vs. “8 hours = good”) to make progress easier to understand.
+
+Weight and BMI also show some inconsistencies, with many users logging manually. To improve this, Bellabeat could promote easier weight tracking (like smart scales) and give simple weekly summaries so users stay consistent.
+
+Finally, in terms of engagement and marketing, activity peaks in the afternoon (5–7 pm) and on Saturdays, while Sundays show the lowest activity. Bellabeat could take advantage of this with challenges or reminders that match these patterns. Start a gamification tactic like streaks or badges to help users log more consistently.
+
+# References 
+
+1. Professional, C. C. M. (2025, July 22). Body mass Index (BMI). Cleveland Clinic. https://my.clevelandclinic.org/health/articles/9464-body-mass-index-bmi
+2. Suni, E., & Suni, E. (2025, July 11). How much sleep do you need? Sleep Foundation. https://www.sleepfoundation.org/how-sleep-works/how-much-sleep-do-we-really-need
+3. Huizen, J. (2024, August 20). How many steps should people take per day? https://www.medicalnewstoday.com/articles/how-many-steps-should-you-take-a-day
